@@ -1,0 +1,8 @@
+else = { ("E"|"e") ~ ("L"| "l") ~ ("S"|"s") ~ ("E"|"e") }
+typeid = { 'A'..'Z' ~ ASCII_ALPHANUMERIC* }
+bool_const = { ASCII_ALPHANUMERIC+ }
+file = {
+     SOI ~
+     ((else|typeid|bool_const) ~ NEWLINE*)* ~
+     EOI
+}
