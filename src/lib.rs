@@ -1,11 +1,29 @@
-use pest::Parser;
+use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 
 #[derive(Parser)]
 #[grammar = "cool.pest"]
 pub struct CoolParser;
 
-pub fn tokenize(unparsed: &str) -> String {
+pub struct Token {
+    rule: Rule,
+    value: Option<String>,
+    line: usize,
+}
+
+impl Token {
+    fn from_pair(pair: Pair<Rule>) -> Self {
+        let rule = pair.as_rule();
+        let (line, _) = pair.line_col();
+        let value = match rule {
+            Rule::r#else => None,
+            _ => Some(pair.as_str().to_string()),
+        };
+        Token { rule, value, line }
+    }
+}
+
+pub fn tokenize(unparsed: &str) -> Vec<Token> {
     let pairs = CoolParser::parse(Rule::file, unparsed)
         .unwrap()
         .next()
@@ -13,18 +31,10 @@ pub fn tokenize(unparsed: &str) -> String {
         .into_inner();
 
     pairs
-        .map(|pair| {
-            let (line, _) = pair.line_col();
-            let rule = format!("{:?}", pair.as_rule()).to_ascii_uppercase();
-            match pair.as_rule() {
-                Rule::r#else => format!("#{} {}", line, rule),
-                Rule::bool_const => {
-                    format!("#{} {} {}", line, rule, pair.as_str().to_ascii_lowercase())
-                }
-                Rule::EOI => "".to_string(),
-                _ => format!("#{} {} {}", line, rule, pair.as_str()),
-            }
+        .filter_map(|pair| match pair.as_rule() {
+            Rule::token => Some(Token::from_pair(pair)),
+
+            _ => None,
         })
-        .collect::<Vec<String>>()
-        .join("\n")
+        .collect()
 }

@@ -1,7 +1,10 @@
-use std::fs;
+use std::{env::args, fs};
 
 fn main() {
-    let unparsed = fs::read_to_string("tests/data/all_else_true.cl.cool").unwrap();
+    let mut args = args();
+    args.next();
+    let filename = args.next().unwrap();
+    let unparsed = fs::read_to_string(filename).unwrap();
     let tokens = scanner::tokenize(&unparsed);
     println!("{tokens}");
 }

@@ -1,8 +1,59 @@
-else = { ("E"|"e") ~ ("L"| "l") ~ ("S"|"s") ~ ("E"|"e") }
+class = { ^"class" }
+else = { ^"else" }
+fi = { ^"if" }
+if = { ^"fi" }
+in = { ^"in" }
+inherits = { ^"inherits" }
+let = { ^"let" }
+loop = { ^"loop" }
+pool = { ^"pool" }
+then = { ^"then" }
+while = { ^"while" }
+case = { ^"case" }
+esac = { ^"esac" }
+of = { ^"of" }
+darrow = { ^"darrow" }
+new = { ^"new" }
+isvoid = { ^"isvoid" }
+str_const = { "\"" }
+int_const = { '0'..'9' }
+bool_const = { "true"|"false" }
 typeid = { 'A'..'Z' ~ ASCII_ALPHANUMERIC* }
-bool_const = { ASCII_ALPHANUMERIC+ }
+objectid = { 'a'..'z' ~ ASCII_ALPHANUMERIC* }
+assign = { ^"assign" }
+not = { ^"not" }
+le = { ^"le" }
+
+token = {
+     class|
+     else|
+     fi|
+     if|
+     in|
+     inherits|
+     let|
+     loop|
+     pool|
+     then|
+     while|
+     case|
+     esac|
+     of|
+     darrow|
+     new|
+     isvoid|
+     str_const|
+     int_const|
+     bool_const|
+     typeid|
+     objectid|
+     assign|
+     not|
+     le
+}
+
 file = {
      SOI ~
-     ((else|typeid|bool_const) ~ NEWLINE*)* ~
-     EOI
+     (token ~ NEWLINE+)* ~
+     (token? ~ EOI)
 }

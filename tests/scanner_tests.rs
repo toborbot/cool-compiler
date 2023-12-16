@@ -7,7 +7,8 @@ fn test(name: &str) {
     let output_path = format!("{input_path}.out");
     let input = fs::read_to_string(&input_path).unwrap();
     let reference_output = fs::read_to_string(&output_path).unwrap();
-    let output = format!("#name \"{}\"\n{}", &filename, scanner::tokenize(&input));
+    let header = format!("#name \"{}\"", &filename);
+    let output = format!("{}\n{}", header, scanner::tokenize(&input));
     assert_eq!(output, reference_output);
 }
 
