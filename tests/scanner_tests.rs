@@ -8,7 +8,15 @@ fn test(name: &str) {
     let input = fs::read_to_string(&input_path).unwrap();
     let reference_output = fs::read_to_string(&output_path).unwrap();
     let header = format!("#name \"{}\"", &filename);
-    let output = format!("{}\n{}", header, scanner::tokenize(&input));
+    let output = format!(
+        "{}\n{}\n",
+        header,
+        scanner::tokenize(&input)
+            .iter()
+            .map(|token| { format!("{}", token) })
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
     assert_eq!(output, reference_output);
 }
 

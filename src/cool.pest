@@ -1,10 +1,15 @@
+COMMENT = _{ "(*" ~ (!"*)" ~ ANY)* ~ "*)" }
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+
+line_comment = { "--" }
+
 class = { ^"class" }
 else = { ^"else" }
 fi = { ^"if" }
 if = { ^"fi" }
-in = { ^"in" }
 inherits = { ^"inherits" }
 let = { ^"let" }
+in = { ^"in" }
 loop = { ^"loop" }
 pool = { ^"pool" }
 then = { ^"then" }
@@ -15,16 +20,34 @@ of = { ^"of" }
 darrow = { ^"darrow" }
 new = { ^"new" }
 isvoid = { ^"isvoid" }
-str_const = { "\"" }
+
+double_quote = { "\"" }
+inner_str = @{ (!("\"") ~ ANY)* }
+str_const = { double_quote ~ inner_str ~ double_quote }
+
 int_const = { '0'..'9' }
-bool_const = { "true"|"false" }
-typeid = { 'A'..'Z' ~ ASCII_ALPHANUMERIC* }
-objectid = { 'a'..'z' ~ ASCII_ALPHANUMERIC* }
-assign = { ^"assign" }
+
+true = @{ "t" ~ ^"rue" }
+false = @{ "f" ~ ^"alse" }
+bool_const = { true | false }
+
+typeid = @{ 'A'..'Z' ~ (ASCII_ALPHANUMERIC)* }
+objectid = @{ 'a'..'z' ~ (ASCII_ALPHANUMERIC)* }
+
+assign = { ^"<-" }
 not = { ^"not" }
 le = { ^"le" }
 
+operators = {
+     "+" | "-" | "*" | "/" | "." | "~" | "@" | "<=" | ">=" | "=" | ">" | "<"
+}
+
+special_character = {
+     "{" | "}" | ":" | ";" | "(" | ")" | "," | "\\"
+}
+
 token = {
+     line_comment|
      class|
      else|
      fi|
@@ -49,11 +72,10 @@ token = {
      objectid|
      assign|
      not|
-     le
+     le|
+     operators     
 }
 
-file = {
-     SOI ~
-     (token ~ NEWLINE+)* ~
-     (token? ~ EOI)
-}
+token2 = {typeid}
+token3 = @{ token2 ~ WHITESPACE* ~ EOI } 
+file = _{ SOI ~ token3 }
