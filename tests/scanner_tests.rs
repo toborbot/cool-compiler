@@ -8,16 +8,18 @@ fn test(name: &str) {
     let input = fs::read_to_string(&input_path).unwrap();
     let reference_output = fs::read_to_string(&output_path).unwrap();
     let header = format!("#name \"{}\"", &filename);
+    let lines = scanner::tokenize(&input)
+        .iter()
+        .map(|token| format!("{}", token))
+        .collect::<Vec<_>>()
+        .join("\n");
     let output = format!(
-        "{}\n{}\n",
+        "{}\n{}{}",
         header,
-        scanner::tokenize(&input)
-            .iter()
-            .map(|token| { format!("{}", token) })
-            .collect::<Vec<_>>()
-            .join("\n")
+        lines,
+        if lines.len() > 0 { "\n" } else { "" }
     );
-    assert_eq!(output, reference_output);
+    assert_eq!(reference_output, output);
 }
 
 #[test]
