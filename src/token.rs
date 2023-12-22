@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug)]
 pub enum Keyword {
     Class,
@@ -61,4 +63,26 @@ pub enum TokenKind<'a> {
 pub struct Token<'a> {
     pub kind: TokenKind<'a>,
     pub line_number: usize,
+}
+
+impl fmt::Display for Keyword {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let keyword = format!("{:?}", self).to_ascii_lowercase();
+        write!(f, "{}", keyword)
+    }
+}
+
+impl fmt::Display for TokenKind<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TokenKind::Keyword(keyword) => write!(f, "{}", keyword),
+            _ => todo!(),
+        }
+    }
+}
+
+impl fmt::Display for Token<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "#{} {}", self.line_number, self.kind)
+    }
 }

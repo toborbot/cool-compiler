@@ -7,7 +7,7 @@ fn main() {
     let unparsed = fs::read_to_string(filename).unwrap();
     match scanner::tokenize(&unparsed) {
         Ok(tokens) => {
-            dbg!(tokens);
+            println!(tokens);
         }
         Err(e) => {
             dbg!(e);
