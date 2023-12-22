@@ -5,8 +5,12 @@ fn main() {
     args.next();
     let filename = args.next().unwrap();
     let unparsed = fs::read_to_string(filename).unwrap();
-    let tokens = scanner::tokenize(&unparsed);
-    for token in tokens {
-        println!("{}", token);
+    match scanner::tokenize(&unparsed) {
+        Ok(tokens) => {
+            dbg!(tokens);
+        }
+        Err(e) => {
+            dbg!(e);
+        }
     }
 }

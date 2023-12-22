@@ -1,84 +1,17 @@
-COMMENT = _{ "(*" ~ (!"*)" ~ ( COMMENT | ANY ) )* ~ "*)" }
-
 formfeed = { '\u{0C}'..'\u{0C}' }
 vertical_tab = { '\u{0B}'..'\u{0B}' }
+double_quote = { "\"" }
+
 WHITESPACE = _{ " " | "\t" | "\r" | formfeed | vertical_tab | NEWLINE }
+COMMENT = _{ "(*" ~ (!"*)" ~ ( COMMENT | ANY ) )* ~ "*)" }
 
 line_comment = @{ "--" ~ (!NEWLINE ~ ANY)* }
+error_eof_in_comment = @{ "(*" ~ (!EOI ~ ANY)* ~ EOI }
+error_unclosed_comment = { "*)" }
 
-unterminated_comment = @{ "(*" ~ (!EOI ~ ANY)* ~ EOI }
-unterminated_comment_t = { unterminated_comment }
-
-term = { "_" | ASCII_ALPHANUMERIC }
-
-class = { ^"class" }
-class_t = ${ class ~ !term }
-
-else = { ^"else" }
-else_t = ${ else ~ !term }
-
-if = { ^"if" }
-if_t = ${ if ~ !term }
-
-fi = { ^"fi" }
-fi_t = ${ fi ~ !term }
-
-inherits = { ^"inherits" }
-inherits_t = ${ inherits ~ !term }
-
-let = { ^"let" }
-let_t = ${ let ~ !term}
-
-in = { ^"in" }
-in_t = ${ in ~ !term}
-
-loop = { ^"loop" }
-loop_t = ${ loop ~ !term }
-
-pool = { ^"pool" }
-pool_t = ${ pool ~ !term}
-
-then = { ^"then" }
-then_t = ${ then ~ !term}
-
-while = { ^"while" }
-while_t = ${ while ~ !term }
-
-case = { ^"case" }
-case_t = ${ case ~ !term }
-
-esac = { ^"esac" }
-esac_t = ${ esac ~ !term }
-
-of = { ^"of" }
-of_t = ${ of ~ !term}
-
-darrow = { "=>" }
-darrow_t = ${ darrow }
-
-new = { ^"new" }
-new_t = ${ new ~ !term }
-
-isvoid = { ^"isvoid" }
-isvoid_t = ${ isvoid ~ !term }
-
-assign = { "<-" }
-assign_t = ${ assign ~ !term}
-
-not = { ^"not" }
-not_t = ${ not ~ !term }
-
-le = { "<=" }
-le_t = ${ le }
-
-true = @{ "t" ~ ^"rue" }
-false = @{ "f" ~ ^"alse" }
-bool_const = { true | false }
-bool_const_t = ${ bool_const ~ !term }
-
-double_quote = { "\"" }
-escaped_backspace = { "\\b" }
+/* CONSTANTS */
 escaped_tab = { "\\t" }
+escaped_backspace = { "\\b" }
 escaped_newline = { "\\n" }
 escaped_formfeed = { "\\f" }
 escaped_quote = { "\\\"" }
@@ -87,84 +20,131 @@ multiline = { "\\\n" }
 
 word = { !"\"" ~ !("\n") ~ ANY}
 inner_str = ${
-    (escaped_tab |
-     escaped_backspace |
-     escaped_newline |
-     escaped_formfeed |
-     escaped_quote |
-     escaped_backslash |
-     multiline |
-     "\\"? ~ word)*
+    (
+    escaped_tab |
+    escaped_backspace |
+    escaped_newline |
+    escaped_formfeed |
+    escaped_quote |
+    escaped_backslash |
+    multiline |
+    "\\"? ~ word
+    )*
 }
 
-unterminated_str = ${ double_quote ~ inner_str ~ "\n" }
-unterminated_str_t = ${ unterminated_str }
-
-eof_in_str = ${ double_quote ~ inner_str ~ EOI }
-eof_in_str_t = ${ eof_in_str }
-
+error_eof_in_str = ${ double_quote ~ inner_str ~ EOI }
+error_unterminated_str = ${ double_quote ~ inner_str ~ "\n" }
 str_const = ${ double_quote ~ inner_str ~ double_quote }
-str_const_t = ${ str_const }
+
+true = @{ "t" ~ ^"rue" }
+false = @{ "f" ~ ^"alse" }
+bool_const = { true | false }
+bool_const_t = ${ bool_const ~ !id_char }
 
 int_const = { ('0'..'9')+ }
-int_const_t = ${ int_const }
 
-typeid = @{ 'A'..'Z' ~ term* }
-typeid_t = ${ typeid }
+/* KEYWORDS */
+id_char = { "_" | ASCII_ALPHANUMERIC }
 
-objectid = @{ 'a'..'z' ~ term* }
-objectid_t = ${ objectid }
+class = { ^"class" }
+class_t = ${ class ~ !id_char }
 
-unmatched_close_comment = { "*)" }
-unmatched_close_comment_t = { unmatched_close_comment }
+else = { ^"else" }
+else_t = ${ else ~ !id_char }
 
-operator = {
-     "+" | "-" | "*" | "/" | "." | "~" | "@" | "=" | "<" | "<=" 
+if = { ^"if" }
+if_t = ${ if ~ !id_char }
+
+inherits = { ^"inherits" }
+inherits_t = ${ inherits ~ !id_char }
+
+let = { ^"let" }
+let_t = ${ let ~ !id_char}
+
+in = { ^"in" }
+in_t = ${ in ~ !id_char}
+
+loop = { ^"loop" }
+loop_t = ${ loop ~ !id_char }
+
+pool = { ^"pool" }
+pool_t = ${ pool ~ !id_char}
+
+then = { ^"then" }
+then_t = ${ then ~ !id_char}
+
+while = { ^"while" }
+while_t = ${ while ~ !id_char }
+
+case = { ^"case" }
+case_t = ${ case ~ !id_char }
+
+esac = { ^"esac" }
+esac_t = ${ esac ~ !id_char }
+
+of = { ^"of" }
+of_t = ${ of ~ !id_char}
+
+new = { ^"new" }
+new_t = ${ new ~ !id_char }
+
+isvoid = { ^"isvoid" }
+isvoid_t = ${ isvoid ~ !id_char }
+
+not = { ^"not" }
+not_t = ${ not ~ !id_char }
+
+keyword = {
+        class_t |
+        else_t |
+        if_t |
+        inherits_t |
+        let_t |
+        in_t |
+        loop_t |
+        pool_t |
+        then_t |
+        while_t |
+        case_t |
+        esac_t |
+        of_t |
+        new_t |
+        isvoid_t |
+        not_t
 }
-operator_t = ${ operator }
 
-special_character = {
+/* Identifiers */
+typeid = @{ 'A'..'Z' ~ id_char* }
+objectid = @{ 'a'..'z' ~ id_char* }
+identifier = { typeid | objectid }
+
+/* Operators */
+operator = {
+         "<-" | "+" | "-" | "*" | "/" | "." | "~" | "@" | "=" | "<" | "<=" 
+}
+
+/* Symbols */
+symbol = {
      "{" | "}" | ":" | ";" | "(" | ")" | ","
 }
-special_character_t = ${ special_character }
 
-error = { ANY }
-error_backslash = { "\\" }
-error_t = { error_backslash | error }
+error_invalid_char = { "\\" }
+unknown_error = { ANY }
 
 token = {
-     class_t|
-     else_t|
-     fi_t|
-     if_t|
-     in_t|
-     inherits_t|
-     let_t|
-     loop_t|
-     pool_t|
-     then_t|
-     while_t|
-     case_t|
-     esac_t|
-     of_t|
-     darrow_t|
-     new_t|
-     isvoid_t|
-     assign_t|
-     not_t  |
-     le_t|
-     bool_const_t|
-     unterminated_comment_t|
-     unterminated_str_t|
-     eof_in_str_t|
-     str_const_t|
-     int_const_t|
-     typeid_t|
-     objectid_t|
-     unmatched_close_comment_t|
-     operator_t|
-     special_character_t|
-     error_t
+      error_eof_in_comment |
+      error_unclosed_comment |
+      error_eof_in_str |
+      error_unterminated_str |
+      str_const |
+      bool_const_t |
+      int_const |
+      keyword |
+      identifier |
+      operator |
+      symbol |
+      error_invalid_char |
+      unknown_error
 }
 
-file = _{ SOI ~ (line_comment | token)* } 
+file = _{ SOI ~ (line_comment | token )* }
