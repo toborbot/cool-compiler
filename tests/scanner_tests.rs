@@ -3,14 +3,20 @@ use std::fs;
 
 fn test(name: &str) {
     let filename = format!("{name}.cool");
+
     let input_path = format!("tests/data/{filename}");
-    let output_path = format!("{input_path}.out");
     let input = fs::read_to_string(&input_path).unwrap();
-    let reference_output = fs::read_to_string(&output_path).unwrap();
+
+    let reference_output_path = format!("{input_path}.out");
+    let reference_output = fs::read_to_string(&reference_output_path).unwrap();
+
     let header = format!("#name \"{}\"", &filename);
     let lines = scanner::tokenize(&input)
         .iter()
-        .map(|token| format!("{}", token))
+        .map(|token_or_error| match token_or_error {
+            Ok(token) => format!("{}", token),
+            Err(e) => format!("{:?}", e),
+        })
         .collect::<Vec<_>>()
         .join("\n");
     let output = format!(
@@ -19,6 +25,7 @@ fn test(name: &str) {
         lines,
         if lines.len() > 0 { "\n" } else { "" }
     );
+
     assert_eq!(reference_output, output);
 }
 

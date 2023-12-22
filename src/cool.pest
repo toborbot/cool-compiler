@@ -1,9 +1,9 @@
 formfeed = { '\u{0C}'..'\u{0C}' }
 vertical_tab = { '\u{0B}'..'\u{0B}' }
 double_quote = { "\"" }
-
-WHITESPACE = _{ " " | "\t" | "\r" | formfeed | vertical_tab | NEWLINE }
+             
 COMMENT = _{ "(*" ~ (!"*)" ~ ( COMMENT | ANY ) )* ~ "*)" }
+WHITESPACE = _{ " " | "\t" | "\r" | formfeed | vertical_tab | NEWLINE }
 
 line_comment = @{ "--" ~ (!NEWLINE ~ ANY)* }
 error_eof_in_comment = @{ "(*" ~ (!EOI ~ ANY)* ~ EOI }
@@ -38,80 +38,33 @@ str_const = ${ double_quote ~ inner_str ~ double_quote }
 
 true = @{ "t" ~ ^"rue" }
 false = @{ "f" ~ ^"alse" }
-bool_const = { true | false }
-bool_const_t = ${ bool_const ~ !id_char }
-
-int_const = { ('0'..'9')+ }
+bool_const = ${ true | false ~ !id_char }
+int_const = @{ ('0'..'9')+ }
 
 /* KEYWORDS */
 id_char = { "_" | ASCII_ALPHANUMERIC }
 
-class = { ^"class" }
-class_t = ${ class ~ !id_char }
-
-else = { ^"else" }
-else_t = ${ else ~ !id_char }
-
-if = { ^"if" }
-if_t = ${ if ~ !id_char }
-
-inherits = { ^"inherits" }
-inherits_t = ${ inherits ~ !id_char }
-
-let = { ^"let" }
-let_t = ${ let ~ !id_char}
-
-in = { ^"in" }
-in_t = ${ in ~ !id_char}
-
-loop = { ^"loop" }
-loop_t = ${ loop ~ !id_char }
-
-pool = { ^"pool" }
-pool_t = ${ pool ~ !id_char}
-
-then = { ^"then" }
-then_t = ${ then ~ !id_char}
-
-while = { ^"while" }
-while_t = ${ while ~ !id_char }
-
-case = { ^"case" }
-case_t = ${ case ~ !id_char }
-
-esac = { ^"esac" }
-esac_t = ${ esac ~ !id_char }
-
-of = { ^"of" }
-of_t = ${ of ~ !id_char}
-
-new = { ^"new" }
-new_t = ${ new ~ !id_char }
-
-isvoid = { ^"isvoid" }
-isvoid_t = ${ isvoid ~ !id_char }
-
-not = { ^"not" }
-not_t = ${ not ~ !id_char }
+class = @{ ^"class" ~ !id_char }
+else = @{ ^"else" ~ !id_char }
+if = @{ ^"if" ~ !id_char }
+fi = @{ ^"fi" ~ !id_char }
+inherits = @{ ^"inherits" ~ !id_char }
+let = @{ ^"let" ~ !id_char}
+in = @{ ^"in" ~ !id_char}
+loop = @{ ^"loop" ~ !id_char }
+pool = @{ ^"pool" ~ !id_char}
+then = @{ ^"then" ~ !id_char}
+while = @{ ^"while" ~ !id_char }
+case = @{ ^"case" ~ !id_char }
+esac = @{ ^"esac" ~ !id_char }
+of = @{ ^"of" ~ !id_char}
+new = @{ ^"new" ~ !id_char }
+isvoid = @{ ^"isvoid" ~ !id_char }
+not = @{ ^"not" ~ !id_char }
 
 keyword = {
-        class_t |
-        else_t |
-        if_t |
-        inherits_t |
-        let_t |
-        in_t |
-        loop_t |
-        pool_t |
-        then_t |
-        while_t |
-        case_t |
-        esac_t |
-        of_t |
-        new_t |
-        isvoid_t |
-        not_t
-}
+        class | else | if | fi | inherits | let | in | loop | pool | then | while | case | esac | of | new | isvoid | not
+        }
 
 /* Identifiers */
 typeid = @{ 'A'..'Z' ~ id_char* }
@@ -120,13 +73,13 @@ identifier = { typeid | objectid }
 
 /* Operators */
 operator = {
-         "<-" | "+" | "-" | "*" | "/" | "." | "~" | "@" | "=" | "<" | "<=" 
-}
+         "<-" | "<=" | "=>" | "+" | "-" | "*" | "/" | "." | "~" | "@" | "=" | "<"
+         }
 
 /* Symbols */
 symbol = {
      "{" | "}" | ":" | ";" | "(" | ")" | ","
-}
+     }
 
 error_invalid_char = { "\\" }
 unknown_error = { ANY }
@@ -137,7 +90,7 @@ token = {
       error_eof_in_str |
       error_unterminated_str |
       str_const |
-      bool_const_t |
+      bool_const |
       int_const |
       keyword |
       identifier |
@@ -145,6 +98,6 @@ token = {
       symbol |
       error_invalid_char |
       unknown_error
-}
+      }
 
 file = _{ SOI ~ (line_comment | token )* }

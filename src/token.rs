@@ -4,6 +4,7 @@ use std::fmt;
 pub enum Keyword {
     Class,
     Else,
+    Fi,
     If,
     In,
     Inherits,
@@ -37,21 +38,10 @@ pub enum Operator {
 }
 
 #[derive(Debug)]
-pub enum Symbol {
-    OpenBracket,
-    CloseBracket,
-    Colon,
-    Semicolon,
-    OpenParenthesis,
-    CloseParenthesis,
-    Comma,
-}
-
-#[derive(Debug)]
 pub enum TokenKind<'a> {
     Keyword(Keyword),
     Operator(Operator),
-    Symbol(Symbol),
+    Symbol(char),
     BoolConstant(bool),
     StringConstant(&'a str),
     IntegerConstant(isize),
@@ -67,7 +57,7 @@ pub struct Token<'a> {
 
 impl fmt::Display for Keyword {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let keyword = format!("{:?}", self).to_ascii_lowercase();
+        let keyword = format!("{:?}", self).to_ascii_uppercase();
         write!(f, "{}", keyword)
     }
 }
@@ -76,7 +66,9 @@ impl fmt::Display for TokenKind<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             TokenKind::Keyword(keyword) => write!(f, "{}", keyword),
-            _ => todo!(),
+            TokenKind::BoolConstant(true_or_false) => write!(f, "BOOL_CONST {}", true_or_false),
+            TokenKind::TypeId(id) => write!(f, "TYPEID {}", id),
+            _ => write!(f, "{:?}", self),
         }
     }
 }
