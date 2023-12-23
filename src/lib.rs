@@ -1,3 +1,5 @@
+use std::fmt;
+
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 use token::{Keyword, Operator, Token, TokenKind};
@@ -12,7 +14,7 @@ pub mod token;
 pub enum ScannerErrorKind {
     EofInComment,
     EofInStringConstant,
-    InvalidCharacter(u8),
+    InvalidCharacter(char),
     StringContainsEscapedNullCharacter,
     StringContainsNullCharacter,
     StringConstantTooLong,
@@ -21,10 +23,41 @@ pub enum ScannerErrorKind {
     Unknown,
 }
 
+impl fmt::Display for ScannerErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use ScannerErrorKind::*;
+        if let InvalidCharacter(c) = self {
+            match token::escaped_str_of_char(c) {
+                Some(s) => write!(f, "ERROR \"{s}\"")?,
+                None => write!(f, "ERROR \"{c}\"")?,
+            }
+            return Ok(());
+        }
+        let message = match self {
+            EofInComment => "EOF in comment",
+            EofInStringConstant => "EOF in string constant",
+            StringContainsEscapedNullCharacter => "String contains escaped null character.",
+            StringContainsNullCharacter => "String contains null character.",
+            StringConstantTooLong => "String constant too long",
+            UnclosedComment => "Unmatched *)",
+            UnterminatedStringConstant => "Unterminated string constant",
+            Unknown => "Unknown",
+            InvalidCharacter(_) => panic!("Unreachable case"),
+        };
+        write!(f, "ERROR \"{message}\"")
+    }
+}
+
 #[derive(Debug)]
 pub struct ScannerError {
     pub kind: ScannerErrorKind,
     pub line_number: usize,
+}
+
+impl fmt::Display for ScannerError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "#{} {}", self.line_number, self.kind)
+    }
 }
 
 impl ScannerError {
@@ -47,13 +80,14 @@ impl LineRange for Pair<'_, Rule> {
     }
 
     fn end_line(self) -> usize {
+        let mut end_line = 0;
         for t in self.tokens() {
             match t {
                 pest::Token::Start { .. } => (),
-                pest::Token::End { rule: _, pos } => return pos.line_col().0,
+                pest::Token::End { rule: _, pos } => end_line = pos.line_col().0,
             }
         }
-        panic!("No end token found in pair.");
+        end_line
     }
 }
 
@@ -87,15 +121,9 @@ fn tokenize_identifier(identifier: Pair<'_, Rule>) -> Result<Token, ScannerError
 }
 
 fn tokenize_int_const(int_const: Pair<'_, Rule>) -> Result<Token, ScannerError> {
-    let mut line_number = int_const.line_col().0;
-    match int_const.as_str().parse() {
-        Ok(value) => {
-            let kind = TokenKind::IntegerConstant(value);
-            line_number = int_const.end_line();
-            Ok(Token { kind, line_number })
-        }
-        Err(_) => Err(ScannerError::new_unknown_error(line_number)),
-    }
+    let line_number = int_const.line_col().0;
+    let kind = TokenKind::UnparsedIntConstant(int_const.as_str());
+    Ok(Token { kind, line_number })
 }
 
 fn tokenize_keyword(keyword: Pair<'_, Rule>) -> Result<Token, ScannerError> {
@@ -149,17 +177,44 @@ fn tokenize_operator(operator: Pair<'_, Rule>) -> Result<Token, ScannerError> {
     return Ok(Token { kind, line_number });
 }
 
+fn char_of_str_element(str_element: Pair<'_, Rule>) -> Option<char> {
+    let escaped_character = str_element.into_inner().next()?;
+    match escaped_character.as_rule() {
+        Rule::r#char => escaped_character.as_str().chars().next(),
+        Rule::escaped_quote => Some('"'),
+        Rule::escaped_newline => Some('\n'),
+        Rule::escaped_tab => Some('\t'),
+        Rule::escaped_backslash => Some('\\'),
+        Rule::escaped_backspace => Some('\u{0008}'),
+        Rule::escaped_formfeed => Some('\u{000C}'),
+        Rule::multiline => Some('\n'),
+        _ => None,
+    }
+}
+
 fn tokenize_str_const(str_const: Pair<'_, Rule>) -> Result<Token, ScannerError> {
-    let mut line_number = str_const.line_col().0;
+    let line_number = str_const.clone().end_line();
     for inner_str in str_const.into_inner() {
         match inner_str.as_rule() {
+            Rule::double_quote => continue,
             Rule::inner_str => {
-                let value = inner_str.as_str();
-                line_number = inner_str.end_line();
-                let kind = TokenKind::StringConstant(value);
+                let mut characters = vec![];
+                for str_element in inner_str.into_inner() {
+                    match char_of_str_element(str_element) {
+                        Some(c) => characters.push(c),
+                        None => return Err(ScannerError::new_unknown_error(line_number)),
+                    }
+                }
+                if characters.len() > 1024 {
+                    return Err(ScannerError {
+                        kind: ScannerErrorKind::StringConstantTooLong,
+                        line_number,
+                    });
+                }
+                let kind = TokenKind::StringConstant(characters);
                 return Ok(Token { kind, line_number });
             }
-            _ => continue,
+            _ => break,
         }
     }
     return Err(ScannerError::new_unknown_error(line_number));
@@ -181,6 +236,7 @@ pub fn tokenize(text: &str) -> Vec<Result<Token, ScannerError>> {
     let pairs = CoolParser::parse(Rule::file, text).unwrap();
     for pair in pairs {
         for token_pair in pair.into_inner() {
+            use ScannerErrorKind::*;
             let token = match token_pair.as_rule() {
                 Rule::bool_const => tokenize_bool_const(token_pair),
                 Rule::int_const => tokenize_int_const(token_pair),
@@ -189,19 +245,38 @@ pub fn tokenize(text: &str) -> Vec<Result<Token, ScannerError>> {
                 Rule::operator => tokenize_operator(token_pair),
                 Rule::str_const => tokenize_str_const(token_pair),
                 Rule::symbol => tokenize_symbol(token_pair),
+                Rule::error_eof_in_comment => Err(ScannerError {
+                    kind: EofInComment,
+                    line_number: token_pair.end_line(),
+                }),
+                Rule::error_unclosed_comment => Err(ScannerError {
+                    kind: UnclosedComment,
+                    line_number: token_pair.end_line(),
+                }),
                 Rule::error_eof_in_str => Err(ScannerError {
-                    kind: ScannerErrorKind::EofInStringConstant,
+                    kind: EofInStringConstant,
                     line_number: token_pair.end_line(),
                 }),
                 Rule::error_unterminated_str => Err(ScannerError {
-                    kind: ScannerErrorKind::UnterminatedStringConstant,
+                    kind: UnterminatedStringConstant,
                     line_number: token_pair.end_line(),
                 }),
-                _ => {
-                    dbg!(&token_pair.line_col());
-                    dbg!(&token_pair);
-                    todo!();
+                Rule::error_escaped_null_in_str => Err(ScannerError {
+                    kind: StringContainsEscapedNullCharacter,
+                    line_number: token_pair.end_line(),
+                }),
+                Rule::error_null_in_str => Err(ScannerError {
+                    kind: StringContainsNullCharacter,
+                    line_number: token_pair.end_line(),
+                }),
+                Rule::error_invalid_char => {
+                    let invalid_char = token_pair.as_str().chars().next().unwrap_or_default();
+                    Err(ScannerError {
+                        kind: InvalidCharacter(invalid_char),
+                        line_number: token_pair.end_line(),
+                    })
                 }
+                _ => Err(ScannerError::new_unknown_error(token_pair.end_line())),
             };
             tokens.push(token);
         }

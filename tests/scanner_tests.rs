@@ -15,16 +15,11 @@ fn test(name: &str) {
         .iter()
         .map(|token_or_error| match token_or_error {
             Ok(token) => format!("{}", token),
-            Err(e) => format!("{:?}", e),
+            Err(e) => format!("{}", e),
         })
         .collect::<Vec<_>>()
         .join("\n");
-    let output = format!(
-        "{}\n{}{}",
-        header,
-        lines,
-        if lines.len() > 0 { "\n" } else { "" }
-    );
+    let output = [header, lines, "".to_owned()].join("\n");
 
     assert_eq!(reference_output, output);
 }

@@ -8,9 +8,7 @@ fn main() {
     for token_or_error in scanner::tokenize(&unparsed) {
         match token_or_error {
             Ok(token) => println!("{token}"),
-            Err(e) => {
-                dbg!(e);
-            }
+            Err(e) => println!("{e}"),
         }
     }
 }

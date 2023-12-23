@@ -1,3 +1,4 @@
+null = { '\u{00}'..'\u{00}' }
 formfeed = { '\u{0C}'..'\u{0C}' }
 vertical_tab = { '\u{0B}'..'\u{0B}' }
 double_quote = { "\"" }
@@ -9,6 +10,8 @@ line_comment = @{ "--" ~ (!NEWLINE ~ ANY)* }
 error_eof_in_comment = @{ "(*" ~ (!EOI ~ ANY)* ~ EOI }
 error_unclosed_comment = { "*)" }
 
+id_char = { "_" | ASCII_ALPHANUMERIC }
+
 /* CONSTANTS */
 escaped_tab = { "\\t" }
 escaped_backspace = { "\\b" }
@@ -17,10 +20,9 @@ escaped_formfeed = { "\\f" }
 escaped_quote = { "\\\"" }
 escaped_backslash =  { "\\\\" }
 multiline = { "\\\n" }
+char = { !"\"" ~ !("\n") ~ !null ~ ANY}
 
-word = { !"\"" ~ !("\n") ~ ANY}
-inner_str = ${
-    (
+str_element = {
     escaped_tab |
     escaped_backspace |
     escaped_newline |
@@ -28,22 +30,25 @@ inner_str = ${
     escaped_quote |
     escaped_backslash |
     multiline |
-    "\\"? ~ word
-    )*
+    "\\"? ~ char
 }
+inner_str = ${ str_element* }
 
 error_eof_in_str = ${ double_quote ~ inner_str ~ EOI }
 error_unterminated_str = ${ double_quote ~ inner_str ~ "\n" }
+
+escaped_null = @{ "\\" ~ null}
+error_escaped_null_in_str = $ { double_quote ~ str_element* ~ escaped_null ~ str_element* ~ double_quote? }
+error_null_in_str = $ { double_quote ~ str_element* ~ null ~ str_element* ~ double_quote? }
+
 str_const = ${ double_quote ~ inner_str ~ double_quote }
 
 true = @{ "t" ~ ^"rue" }
-false = @{ "f" ~ ^"alse" }
-bool_const = ${ true | false ~ !id_char }
+false = @{ "f" ~ ^"alse"  }
+bool_const = ${ (true | false) ~ !id_char }
 int_const = @{ ('0'..'9')+ }
 
 /* KEYWORDS */
-id_char = { "_" | ASCII_ALPHANUMERIC }
-
 class = @{ ^"class" ~ !id_char }
 else = @{ ^"else" ~ !id_char }
 if = @{ ^"if" ~ !id_char }
@@ -81,14 +86,15 @@ symbol = {
      "{" | "}" | ":" | ";" | "(" | ")" | ","
      }
 
-error_invalid_char = { "\\" }
-unknown_error = { ANY }
+error_invalid_char = { ANY }
 
 token = {
       error_eof_in_comment |
       error_unclosed_comment |
       error_eof_in_str |
       error_unterminated_str |
+      error_escaped_null_in_str |
+      error_null_in_str |
       str_const |
       bool_const |
       int_const |
@@ -96,8 +102,7 @@ token = {
       identifier |
       operator |
       symbol |
-      error_invalid_char |
-      unknown_error
+      error_invalid_char
       }
 
 file = _{ SOI ~ (line_comment | token )* }
